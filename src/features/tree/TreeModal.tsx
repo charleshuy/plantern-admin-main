@@ -39,7 +39,8 @@ export default function TreeModal({ onClose, tree }: Props) {
 
     try {
       setLoading(true);
-      const plantData = {
+      // Explicitly exclude id and created_at for new plants
+      const plantData: Omit<PlantWithSales, 'id' | 'created_at' | 'sales'> = {
         name,
         description: description || null,
         model_url: modelUrl,
@@ -58,9 +59,10 @@ export default function TreeModal({ onClose, tree }: Props) {
       }
 
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving tree:", error);
-      alert("Failed to save tree. Please try again.");
+      const errorMessage = error?.message || "Failed to save tree. Please try again.";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

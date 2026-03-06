@@ -8,15 +8,14 @@ interface Feedback {
   resolved: boolean;
 }
 
-interface User {
-  id: number;
-  username: string;
-  image: string;
-  feedbacks: Feedback[];
-}
-
 interface UserFeedbackModalProps {
-  user: User;
+  user: {
+    id: string | number;
+    display_name?: string | null;
+    email?: string | null;
+    avatar_url?: string | null;
+    feedbacks?: Feedback[];
+  };
   onClose: () => void;
 }
 
@@ -27,7 +26,8 @@ export default function UserFeedbackModal({ user, onClose }: UserFeedbackModalPr
   const handleFeedbackClick = (feedback: Feedback) => {
     if (!feedback.resolved) {
       setReplyingTo(feedback);
-      setReplyText(`Hello ${user.username.split(" ")[0]},\n`);
+      const firstName = user.display_name?.split(" ")[0] || user.email?.split("@")[0] || "User";
+      setReplyText(`Hello ${firstName},\n`);
     }
   };
 
@@ -59,7 +59,11 @@ export default function UserFeedbackModal({ user, onClose }: UserFeedbackModalPr
           /* Reply view */
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img src={user.image} className="w-10 h-10 rounded-full object-cover" />
+              <img 
+                src={user.avatar_url || "https://via.placeholder.com/40"} 
+                className="w-10 h-10 rounded-full object-cover" 
+                alt={user.display_name || "User"}
+              />
             </div>
             <p className="text-sm text-gray-800 font-medium mb-4">
               RE: {replyingTo.message}
@@ -89,11 +93,20 @@ export default function UserFeedbackModal({ user, onClose }: UserFeedbackModalPr
           /* Feedback list view */
           <div className="flex gap-6">
             <div className="flex flex-col items-center gap-2">
-              <img src={user.image} className="w-16 h-16 rounded-xl object-cover" />
-              <span className="text-sm font-medium text-center">{user.username}</span>
+              <img 
+                src={user.avatar_url || "https://via.placeholder.com/64"} 
+                className="w-16 h-16 rounded-xl object-cover" 
+                alt={user.display_name || "User"}
+              />
+              <span className="text-sm font-medium text-center">
+                {user.display_name || user.email || "User"}
+              </span>
             </div>
             <div className="flex-1 flex flex-col gap-4">
-              {user.feedbacks.map((fb) => (
+              {(user.feedbacks || []).length === 0 ? (
+                <p className="text-sm text-gray-500">No feedback available</p>
+              ) : (
+                user.feedbacks!.map((fb) => (
                 <div key={fb.id}>
                   <p className="text-xs text-gray-400 mb-1">{fb.date}</p>
                   <div
@@ -112,7 +125,8 @@ export default function UserFeedbackModal({ user, onClose }: UserFeedbackModalPr
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}

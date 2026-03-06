@@ -65,13 +65,19 @@ export const plantsService = {
 
   // Create plant
   async create(plant: Omit<Plant, 'id' | 'created_at'>) {
+    // Explicitly exclude id and created_at to ensure auto-generation
+    const { id, created_at, ...plantData } = plant as any;
+    
     const { data, error } = await supabase
       .from('plants')
-      .insert(plant)
+      .insert(plantData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating plant:', error);
+      throw error;
+    }
     return data;
   },
 

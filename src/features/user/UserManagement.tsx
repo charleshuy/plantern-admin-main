@@ -1,7 +1,8 @@
-import { Search, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Search, SquarePen, Trash2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import Pagination from "../../components/Pagination";
 import UserFeedbackModal from "./UserFeedbackModal";
+import UserModal from "./UserModal";
 import { profilesService } from "../../services/profiles";
 import type { UserWithStats } from "../../types/database";
 
@@ -13,6 +14,8 @@ export default function UserManagement() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithStats | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,26 @@ export default function UserManagement() {
     try {
       await profilesService.delete(userId);
       // Refresh the list
+      await refreshUsers();
+    } catch (err: any) {
+      console.error("Error deleting user:", err);
+      alert(err.message || "Failed to delete user. Please try again.");
+    }
+  };
+
+  const handleEdit = (user: UserWithStats) => {
+    setEditingUser(user);
+    setIsModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingUser(null);
+    setIsModalOpen(true);
+  };
+
+  const refreshUsers = async () => {
+    try {
+      setLoading(true);
       const result = await profilesService.getWithStats(
         currentPage,
         PAGE_SIZE,
@@ -56,8 +79,10 @@ export default function UserManagement() {
       setUsers(result.data);
       setTotalCount(result.count);
     } catch (err) {
-      console.error("Error deleting user:", err);
-      alert("Failed to delete user. Please try again.");
+      console.error("Error fetching users:", err);
+      setError("Failed to load users. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,6 +107,12 @@ export default function UserManagement() {
               className="border rounded-full pl-9 pr-4 py-2 text-sm"
             />
           </div>
+          <button
+            onClick={handleAdd}
+            className="bg-black text-[#BDFF66] px-5 py-2 rounded-full font-medium transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2">
+            <Plus size={16} />
+            ADD USER
+          </button>
         </div>
       </div>
 
@@ -168,7 +199,9 @@ export default function UserManagement() {
                     )}
                   </td>
                   <td className="space-x-2">
-                    <button className="px-2 py-1 border rounded hover:bg-gray-200 transition-all duration-200 hover:scale-105 active:scale-95">
+                    <button 
+                      onClick={() => handleEdit(user)}
+                      className="px-2 py-1 border rounded hover:bg-gray-200 transition-all duration-200 hover:scale-105 active:scale-95">
                       <SquarePen size={20} />
                     </button>
                     <button 
@@ -201,6 +234,17 @@ export default function UserManagement() {
         <UserFeedbackModal
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
+        />
+      )}
+
+      {isModalOpen && (
+        <UserModal
+          user={editingUser || undefined}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingUser(null);
+          }}
+          onSuccess={refreshUsers}
         />
       )}
     </div>
