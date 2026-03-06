@@ -58,7 +58,7 @@ export default function OrderManagement() {
     return "Premium Tree";
   };
 
-  const getOrderStatus = (transaction: TransactionWithUser) => {
+  const getOrderStatus = () => {
     // Transactions are typically completed, but you might have status logic
     return "Completed";
   };
@@ -87,9 +87,9 @@ export default function OrderManagement() {
           {open === "date" && (
             <div className="absolute top-full left-0 mt-1 w-44 bg-white border rounded-lg shadow-lg z-50">
               {[
-                { label: "Last week", value: "week" },
-                { label: "Last month", value: "month" },
-                { label: "Last year", value: "year" },
+                { label: "Last week", value: "week" as const },
+                { label: "Last month", value: "month" as const },
+                { label: "Last year", value: "year" as const },
               ].map((item) => (
                 <div
                   key={item.value}
@@ -199,7 +199,7 @@ export default function OrderManagement() {
             ) : (
               orders.map((order) => {
                 const orderType = getOrderType(order.product_id);
-                const orderStatus = getOrderStatus(order);
+                const orderStatus = getOrderStatus();
                 const userName = (order.user as any)?.display_name || (order.user as any)?.email || "Unknown";
                 
                 return (

@@ -186,7 +186,7 @@ export default function TreeModal({ onClose, tree }: Props) {
               type="file"
               className="hidden"
               multiple
-              webkitdirectory="true"
+              {...({ webkitdirectory: "true" } as any)}
               onChange={(e) => handleFiles(e.target.files)}
             />
           </div>

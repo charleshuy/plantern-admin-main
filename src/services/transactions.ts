@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Transaction, TransactionWithUser } from '../types/database';
+import type { TransactionWithUser } from '../types/database';
 
 export const transactionsService = {
   // Get all transactions with pagination and filters

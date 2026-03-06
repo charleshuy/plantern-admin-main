@@ -6,7 +6,7 @@ export const plantsService = {
   async getAll(page: number = 1, pageSize: number = 10, search?: string) {
     let query = supabase
       .from('plants')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (search) {
@@ -16,7 +16,7 @@ export const plantsService = {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await query.range(from, to).select('*', { count: 'exact' });
+    const { data, error, count } = await query.range(from, to);
 
     if (error) throw error;
     return { data: data || [], count: count || 0 };

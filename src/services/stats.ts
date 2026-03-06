@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import { profilesService } from './profiles';
-import { plantsService } from './plants';
 import { transactionsService } from './transactions';
 
 export const statsService = {
@@ -29,13 +28,13 @@ export const statsService = {
       const twoDaysAgo = new Date();
       twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
       
-      const { count: previousUsers } = await supabase
+      const { count: previousUsersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', twoDaysAgo.toISOString())
         .lt('created_at', yesterday.toISOString());
 
-      const previousPremium = await supabase
+      const { count: previousPremiumCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('is_premium', true)
@@ -47,12 +46,12 @@ export const statsService = {
       );
 
       // Calculate percentage changes
-      const userChange = previousUsers.count 
-        ? (((newUsers || 0) - (previousUsers.count || 0)) / (previousUsers.count || 1)) * 100
+      const userChange = previousUsersCount 
+        ? (((newUsers || 0) - (previousUsersCount || 0)) / (previousUsersCount || 1)) * 100
         : 0;
 
-      const premiumChange = previousPremium.count
-        ? (((totalPremium || 0) - (previousPremium.count || 0)) / (previousPremium.count || 1)) * 100
+      const premiumChange = previousPremiumCount
+        ? (((totalPremium || 0) - (previousPremiumCount || 0)) / (previousPremiumCount || 1)) * 100
         : 0;
 
       const salesChange = previousTreeSales
