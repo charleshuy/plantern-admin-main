@@ -200,7 +200,10 @@ export default function OrderManagement() {
               orders.map((order) => {
                 const orderType = getOrderType(order.product_id);
                 const orderStatus = getOrderStatus();
-                const userName = (order.user as any)?.display_name || (order.user as any)?.email || "Unknown";
+                const userName =
+                  order.user?.display_name ||
+                  order.user?.email ||
+                  (order.user_id ? `${order.user_id.slice(0, 8)}…` : "Unknown");
                 
                 return (
                   <tr key={order.id} className="border-b hover:bg-gray-50">

@@ -1,5 +1,36 @@
 import { supabase } from './supabase';
-import type { TransactionWithUser } from '../types/database';
+import type { TransactionOrderUser, TransactionWithUser } from '../types/database';
+
+/** Load auth.users fields for transaction rows (see supabase_transaction_order_users.sql). */
+export async function fetchTransactionOrderUsers(
+  userIds: string[],
+): Promise<Map<string, TransactionOrderUser>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  const map = new Map<string, TransactionOrderUser>();
+  if (unique.length === 0) return map;
+
+  const { data, error } = await supabase.rpc('transaction_order_users', {
+    p_user_ids: unique,
+  });
+
+  if (error) {
+    console.warn(
+      '[transactions] transaction_order_users RPC failed — run supabase_transaction_order_users.sql:',
+      error.message,
+    );
+    return map;
+  }
+
+  for (const row of data || []) {
+    const r = row as { id: string; email: string | null; display_name: string | null };
+    map.set(r.id, {
+      id: r.id,
+      email: r.email ?? null,
+      display_name: r.display_name ?? null,
+    });
+  }
+  return map;
+}
 
 /** Tree purchases use numeric string ids (e.g. "1", "2", "3"), not SKUs like "gold_100". */
 export function isNumericTreeProductId(productId: string | null | undefined): boolean {
@@ -22,9 +53,7 @@ export const transactionsService = {
     },
     sortNewest: boolean = true
   ) {
-    let query = supabase
-      .from('transactions')
-      .select('*, profiles!user_id(id, display_name, email)', { count: 'exact' });
+    let query = supabase.from('transactions').select('*', { count: 'exact' });
 
     // Date filter
     if (filters?.dateFilter && filters.dateFilter !== 'all') {
@@ -56,29 +85,28 @@ export const transactionsService = {
 
     if (error) throw error;
 
-    // Transform data to include user info
-    const transactionsWithUser: TransactionWithUser[] = (data || []).map((t: any) => ({
+    const rows = data || [];
+    const userMap = await fetchTransactionOrderUsers(rows.map((t: { user_id: string }) => t.user_id));
+
+    const transactionsWithUser: TransactionWithUser[] = rows.map((t: any) => ({
       id: t.id,
       user_id: t.user_id,
       product_id: t.product_id,
       amount: t.amount,
       created_at: t.created_at,
-      user: Array.isArray(t.profiles) ? t.profiles[0] : t.profiles,
+      user: userMap.get(t.user_id),
     }));
 
     return { data: transactionsWithUser, count: count || 0 };
   },
 
-  // Get single transaction
+  // Get single transaction (user fields from auth.users via RPC)
   async getById(id: number) {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*, profiles!user_id(id, display_name, email)')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('transactions').select('*').eq('id', id).single();
 
     if (error) throw error;
-    return data;
+    const userMap = await fetchTransactionOrderUsers([data.user_id]);
+    return { ...data, user: userMap.get(data.user_id) };
   },
 
   // Get total revenue (numeric tree product_id only; amounts shown as positive)
