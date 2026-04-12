@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { profilesService } from './profiles';
-import { transactionsService } from './transactions';
+import { isNumericTreeProductId, transactionsService } from './transactions';
 
 export const statsService = {
   // Get dashboard stats
@@ -109,7 +109,7 @@ export const statsService = {
     }
   },
 
-  // Get recent deals/transactions
+  // Get recent deals/transactions (numeric tree product_id only; positive display amounts)
   async getRecentDeals(limit: number = 10) {
     try {
       const { data, error } = await supabase
@@ -121,12 +121,16 @@ export const statsService = {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(500);
 
       if (error) throw error;
 
-      return (data || []).map((t: any) => ({
-        tree: t.plants?.name || 'Unknown',
+      const treeDeals = (data || []).filter((t: { product_id?: string | null }) =>
+        isNumericTreeProductId(t.product_id),
+      );
+
+      return treeDeals.slice(0, limit).map((t: any) => ({
+        tree: t.plants?.name || `Tree #${t.product_id}`,
         user: t.profiles?.display_name || 'Unknown',
         date: new Date(t.created_at).toLocaleString('en-US', {
           day: '2-digit',
@@ -135,7 +139,7 @@ export const statsService = {
           hour: '2-digit',
           minute: '2-digit',
         }),
-        amount: (t.amount || 0).toLocaleString('vi-VN'),
+        amount: Math.abs(Number(t.amount) || 0).toLocaleString('vi-VN'),
         status: 'Delivered',
       }));
     } catch (error) {
