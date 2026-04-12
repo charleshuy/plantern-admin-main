@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import type { TransactionWithUser } from '../types/database';
 
+/** Tree purchases use numeric string ids (e.g. "1", "2", "3"), not SKUs like "gold_100". */
+export function isNumericTreeProductId(productId: string | null | undefined): boolean {
+  return productId != null && /^\d+$/.test(String(productId));
+}
+
+function treeSaleDisplayAmount(amount: number | null | undefined): number {
+  return Math.abs(Number(amount) || 0);
+}
+
 export const transactionsService = {
   // Get all transactions with pagination and filters
   async getAll(
@@ -72,11 +81,11 @@ export const transactionsService = {
     return data;
   },
 
-  // Get total revenue
+  // Get total revenue (numeric tree product_id only; amounts shown as positive)
   async getTotalRevenue(startDate?: Date, endDate?: Date) {
     let query = supabase
       .from('transactions')
-      .select('amount');
+      .select('amount, product_id');
 
     if (startDate) {
       query = query.gte('created_at', startDate.toISOString());
@@ -89,7 +98,9 @@ export const transactionsService = {
 
     if (error) throw error;
 
-    const total = (data || []).reduce((sum, t) => sum + (t.amount || 0), 0);
+    const total = (data || [])
+      .filter((t) => isNumericTreeProductId(t.product_id))
+      .reduce((sum, t) => sum + treeSaleDisplayAmount(t.amount), 0);
     return total;
   },
 
@@ -100,7 +111,7 @@ export const transactionsService = {
 
     const { data, error } = await supabase
       .from('transactions')
-      .select('amount, created_at')
+      .select('amount, created_at, product_id')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString())
       .order('created_at', { ascending: true });
@@ -109,10 +120,11 @@ export const transactionsService = {
 
     // Group by day
     const dailyRevenue: Record<string, number> = {};
-    (data || []).forEach(t => {
+    (data || []).forEach((t) => {
+      if (!isNumericTreeProductId(t.product_id)) return;
       const date = new Date(t.created_at).getDate();
       const key = `${date}`;
-      dailyRevenue[key] = (dailyRevenue[key] || 0) + (t.amount || 0);
+      dailyRevenue[key] = (dailyRevenue[key] || 0) + treeSaleDisplayAmount(t.amount);
     });
 
     return dailyRevenue;
