@@ -1,6 +1,10 @@
 import { supabase } from './supabase';
 import { profilesService } from './profiles';
-import { isNumericTreeProductId, transactionsService } from './transactions';
+import {
+  fetchTransactionOrderUsers,
+  isNumericTreeProductId,
+  transactionsService,
+} from './transactions';
 
 export const statsService = {
   // Get dashboard stats
@@ -114,12 +118,7 @@ export const statsService = {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select(`
-          *,
-          profiles!user_id (
-            display_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -129,9 +128,12 @@ export const statsService = {
         isNumericTreeProductId(t.product_id),
       );
 
-      return treeDeals.slice(0, limit).map((t: any) => ({
+      const slice = treeDeals.slice(0, limit);
+      const userMap = await fetchTransactionOrderUsers(slice.map((t: { user_id: string }) => t.user_id));
+
+      return slice.map((t: any) => ({
         tree: t.plants?.name || `Tree #${t.product_id}`,
-        user: t.profiles?.display_name || 'Unknown',
+        user: userMap.get(t.user_id)?.display_name || userMap.get(t.user_id)?.email || 'Unknown',
         date: new Date(t.created_at).toLocaleString('en-US', {
           day: '2-digit',
           month: '2-digit',

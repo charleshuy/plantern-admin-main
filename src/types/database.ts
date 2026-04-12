@@ -88,7 +88,14 @@ export interface PlantWithSales extends Plant {
   sales?: number;
 }
 
+/** Resolved from auth.users (via RPC); not the public.profiles row. */
+export interface TransactionOrderUser {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+}
+
 export interface TransactionWithUser extends Transaction {
-  user?: Profile;
+  user?: TransactionOrderUser;
   plant?: Plant;
 }
